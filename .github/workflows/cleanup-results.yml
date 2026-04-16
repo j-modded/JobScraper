@@ -1,0 +1,45 @@
+# This workflow runs the cleanup script to delete old CSV files from results/
+
+name: Cleanup Old Results
+
+# Trigger schedule: runs at 8:30 PM UTC daily
+on:
+  schedule:
+    - cron: '30 20 * * *'  # Daily at 8:30 PM UTC
+  
+  # Also allow manual trigger from GitHub UI
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run in dry-run mode (no files deleted)'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Run cleanup script
+      run: |
+        python cleanup_old_results.py ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}
+    
+    - name: Commit cleanup results (if any files were deleted)
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add results/
+        git commit -m "Cleanup: Remove CSV files older than 30 days - $(date +%Y-%m-%d)" || echo "No changes to commit"
+        git push
+      if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'

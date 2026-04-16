@@ -1,0 +1,70 @@
+# This workflow runs the Job Scraper on a schedule and commits the results
+
+name: Job Scraper Auto-Run
+
+# Trigger schedule: runs at 3:30 PM UTC on weekdays (Monday-Friday)
+on:
+  schedule:
+    - cron: '30 15 * * 1-5'  # Weekdays at 3:30 PM UTC
+  
+  # Also allow manual trigger from GitHub UI
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  scrape-jobs:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install python-jobspy pandas
+    
+    - name: Run Job Scraper for PMjobs
+      run: |
+        python job_scraper.py PMjobs WS nonWS
+   
+    - name: Run Job Scraper for Datajobs
+      run: |
+        python job_scraper.py Datajobs WS nonWS
+    
+    - name: Run Job Scraper for Autojobs
+      run: |
+        python job_scraper.py Autojobs WS nonWS
+
+    - name: Run Job Scraper for AIjobs
+      run: |
+        python job_scraper.py AIjobs WS nonWS
+
+    - name: Run Job Scraper for ResAsstjobs
+      run: |
+        python job_scraper.py ResAsstjobs WS nonWS
+    
+    - name: Run Job Scraper for VLSIjobs
+      run: |
+        python job_scraper.py VLSIjobs WS nonWS
+    
+    - name: Run Job Scraper for ECEjobs
+      run: |
+        python job_scraper.py ECEjobs WS nonWS
+    
+
+    - name: Commit and push results
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add results/
+        git commit -m "Auto-generated job results - $(date +%Y-%m-%d)" || echo "No changes to commit"
+        git push
+      if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
